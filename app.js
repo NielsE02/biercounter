@@ -175,7 +175,7 @@
       .from("drinks")
       .select("id, player_id, owner_user_id, drink_type, created_at, players(name)")
       .order("created_at", { ascending: false })
-      .limit(2000);
+      .limit(500);
 
     if (error) {
       throw error;
@@ -288,12 +288,6 @@
   }
 
   async function deleteDrink(drinkId, fromAdmin = false) {
-    const confirmed = window.confirm("Wil je deze invoer verwijderen?");
-
-    if (!confirmed) {
-      return;
-    }
-
     const { error } = await state.client
       .from("drinks")
       .delete()
