@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f6f3eb">
+  <meta name="description" content="Een eenvoudige vakantieteller voor een besloten vriendengroep.">
+  <title>VakantieTeller</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Vakantiegroep</p>
+      <h1>VakantieTeller</h1>
+    </div>
+    <div class="topbar-actions">
+      <button id="switch-player-button" class="button button-quiet hidden" type="button">
+        Andere speler
+      </button>
+      <button id="admin-button" class="button button-quiet" type="button">
+        Beheer
+      </button>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section id="setup-screen" class="panel hidden">
+      <h2>Website instellen</h2>
+      <p>
+        Vul eerst jouw Supabase URL en publishable key in het bestand
+        <code>config.js</code> in.
+      </p>
+    </section>
+
+    <section id="loading-screen" class="panel">
+      <div class="loader" aria-hidden="true"></div>
+      <p>Gegevens laden</p>
+    </section>
+
+    <section id="player-screen" class="panel hidden">
+      <p class="eyebrow">Stap 1</p>
+      <h2>Wie ben je?</h2>
+      <p class="muted">Kies je naam. De keuze wordt op deze telefoon bewaard.</p>
+      <div id="player-list" class="player-grid"></div>
+      <p id="player-empty" class="empty-state hidden">
+        Er zijn nog geen spelers. De beheerder moet eerst spelers toevoegen.
+      </p>
+    </section>
+
+    <section id="app-screen" class="hidden">
+      <div class="welcome-row">
+        <div>
+          <p class="eyebrow">Ingelogd als</p>
+          <h2 id="current-player-name"></h2>
+        </div>
+        <div class="today-badge">
+          <span id="current-player-total">0</span>
+          <small>drankjes</small>
+        </div>
+      </div>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Toevoegen</p>
+            <h2>Kies een drankje</h2>
+          </div>
+        </div>
+        <div id="drink-buttons" class="drink-grid"></div>
+        <p id="action-message" class="message" aria-live="polite"></p>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Stand</p>
+            <h2>Klassement</h2>
+          </div>
+          <button id="refresh-button" class="button button-quiet" type="button">
+            Vernieuwen
+          </button>
+        </div>
+        <ol id="scoreboard" class="scoreboard"></ol>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Laatste invoer</p>
+            <h2>Geschiedenis</h2>
+          </div>
+        </div>
+        <div id="history-list" class="history-list"></div>
+        <p id="history-empty" class="empty-state hidden">Er is nog niets toegevoegd.</p>
+      </section>
+
+      <section class="safety-note">
+        Drink rustig, wissel af met water en regel vervoer zonder zelf te rijden.
+      </section>
+    </section>
+
+    <section id="admin-login-screen" class="panel hidden">
+      <p class="eyebrow">Beheerder</p>
+      <h2>Inloggen</h2>
+      <form id="admin-login-form" class="form-stack">
+        <label>
+          E-mailadres
+          <input id="admin-email" type="email" autocomplete="username" required>
+        </label>
+        <label>
+          Wachtwoord
+          <input id="admin-password" type="password" autocomplete="current-password" required>
+        </label>
+        <button class="button button-primary" type="submit">Inloggen</button>
+        <button id="cancel-admin-login" class="button button-quiet" type="button">
+          Annuleren
+        </button>
+      </form>
+      <p id="admin-login-message" class="message" aria-live="polite"></p>
+    </section>
+
+    <section id="admin-screen" class="hidden">
+      <div class="welcome-row">
+        <div>
+          <p class="eyebrow">Beheer</p>
+          <h2>Spelers en scores</h2>
+        </div>
+        <button id="admin-logout-button" class="button button-quiet" type="button">
+          Uitloggen
+        </button>
+      </div>
+
+      <section class="panel">
+        <h2>Speler toevoegen</h2>
+        <form id="add-player-form" class="inline-form">
+          <label class="sr-only" for="new-player-name">Naam</label>
+          <input id="new-player-name" type="text" maxlength="40" placeholder="Naam van speler" required>
+          <button class="button button-primary" type="submit">Toevoegen</button>
+        </form>
+        <p id="admin-message" class="message" aria-live="polite"></p>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Deelnemers</p>
+            <h2>Spelers beheren</h2>
+          </div>
+        </div>
+        <div id="admin-player-list" class="admin-list"></div>
+      </section>
+
+      <section class="panel danger-panel">
+        <h2>Alle scores wissen</h2>
+        <p class="muted">Dit verwijdert alle drankjes. De spelers blijven bestaan.</p>
+        <button id="reset-scores-button" class="button button-danger" type="button">
+          Scores wissen
+        </button>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Controle</p>
+            <h2>Alle invoer</h2>
+          </div>
+        </div>
+        <div id="admin-history-list" class="history-list"></div>
+      </section>
+    </section>
+  </main>
+
+  <template id="drink-button-template">
+    <button class="drink-button" type="button">
+      <span class="drink-icon"></span>
+      <span class="drink-label"></span>
+      <span class="drink-plus">+1</span>
+    </button>
+  </template>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
