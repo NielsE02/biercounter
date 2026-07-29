@@ -137,6 +137,15 @@ p {
   gap: 0.75rem;
 }
 
+.drink-grid {
+  margin-top: 1.15rem;
+}
+
+/* Met drie drankjes vult de laatste knop op een telefoon de hele rij. */
+.drink-grid .drink-button:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
 .player-card {
   min-height: 82px;
   padding: 1rem;
@@ -195,8 +204,8 @@ p {
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 0.65rem;
-  min-height: 70px;
-  padding: 0.85rem;
+  min-height: 74px;
+  padding: 0.95rem;
   border: 1px solid var(--line);
   border-radius: 1rem;
   color: var(--text);
@@ -416,6 +425,11 @@ code {
 
   .drink-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: 1.25rem;
+  }
+
+  .drink-grid .drink-button:last-child:nth-child(odd) {
+    grid-column: auto;
   }
 
   .player-grid {
