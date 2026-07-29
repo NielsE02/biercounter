@@ -377,15 +377,6 @@ input:focus {
   border-color: rgba(161, 45, 45, 0.25);
 }
 
-.safety-note {
-  padding: 0.8rem 1rem;
-  border: 1px solid var(--line);
-  border-radius: 1rem;
-  color: var(--muted);
-  background: rgba(255, 255, 255, 0.55);
-  font-size: 0.82rem;
-  text-align: center;
-}
 
 .loader {
   width: 34px;

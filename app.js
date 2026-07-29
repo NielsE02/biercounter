@@ -4,10 +4,7 @@
   const DRINK_TYPES = [
     { key: "bier", label: "Bier", icon: "🍺" },
     { key: "wijn", label: "Wijn", icon: "🍷" },
-    { key: "cocktail", label: "Cocktail", icon: "🍹" },
-    { key: "shot", label: "Shot", icon: "🥃" },
-    { key: "fris", label: "Fris", icon: "🥤" },
-    { key: "water", label: "Water", icon: "💧" }
+    { key: "cocktail", label: "Cocktail", icon: "🍹" }
   ];
 
   const state = {
