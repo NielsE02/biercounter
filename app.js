@@ -175,7 +175,7 @@
       .from("drinks")
       .select("id, player_id, owner_user_id, drink_type, created_at, players(name)")
       .order("created_at", { ascending: false })
-      .limit(500);
+      .limit(2500);
 
     if (error) {
       throw error;
