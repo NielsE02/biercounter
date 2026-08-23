@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f6f3eb">
   <meta name="description" content="Een eenvoudige vakantieteller voor een besloten vriendengroep.">
   <title>Wat een hork</title>
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
   <header class="topbar">
@@ -36,6 +36,20 @@
     <section id="loading-screen" class="panel">
       <div class="loader" aria-hidden="true"></div>
       <p>Gegevens laden</p>
+    </section>
+
+    <section id="error-screen" class="panel hidden">
+      <p class="eyebrow">Verbinding</p>
+      <h2>Kan gegevens niet laden</h2>
+      <p id="connection-error-message" class="muted">
+        Er ging iets mis bij het verbinden.
+      </p>
+      <button id="retry-button" class="button button-primary" type="button">
+        Opnieuw proberen
+      </button>
+      <p class="connection-help">
+        Blijft dit gebeuren, controleer dan Supabase en probeer het opnieuw.
+      </p>
     </section>
 
     <section id="player-screen" class="panel hidden">
@@ -174,9 +188,7 @@
       <span class="drink-plus">+1</span>
     </button>
   </template>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>

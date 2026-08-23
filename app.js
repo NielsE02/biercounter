@@ -20,6 +20,9 @@
   const elements = {
     setupScreen: document.querySelector("#setup-screen"),
     loadingScreen: document.querySelector("#loading-screen"),
+    errorScreen: document.querySelector("#error-screen"),
+    connectionErrorMessage: document.querySelector("#connection-error-message"),
+    retryButton: document.querySelector("#retry-button"),
     playerScreen: document.querySelector("#player-screen"),
     appScreen: document.querySelector("#app-screen"),
     adminLoginScreen: document.querySelector("#admin-login-screen"),
@@ -51,6 +54,121 @@
     drinkButtonTemplate: document.querySelector("#drink-button-template")
   };
 
+  const REQUEST_TIMEOUT_MS = 15000;
+  const SUPABASE_SCRIPT_TIMEOUT_MS = 10000;
+
+  function fetchWithTimeout(input, init = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+
+    if (init.signal) {
+      if (init.signal.aborted) {
+        controller.abort();
+      } else {
+        init.signal.addEventListener("abort", () => controller.abort(), { once: true });
+      }
+    }
+
+    return fetch(input, {
+      ...init,
+      signal: controller.signal
+    }).finally(() => window.clearTimeout(timer));
+  }
+
+  function loadExternalScript(url, timeoutMs = SUPABASE_SCRIPT_TIMEOUT_MS) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      let finished = false;
+
+      const done = (callback, value) => {
+        if (finished) return;
+        finished = true;
+        window.clearTimeout(timer);
+        script.onload = null;
+        script.onerror = null;
+        callback(value);
+      };
+
+      const timer = window.setTimeout(() => {
+        script.remove();
+        done(reject, new Error("Supabase bibliotheek laden duurde te lang."));
+      }, timeoutMs);
+
+      script.src = url;
+      script.async = true;
+
+      script.onload = () => {
+        if (window.supabase?.createClient) {
+          done(resolve);
+        } else {
+          script.remove();
+          done(reject, new Error("Supabase bibliotheek is niet beschikbaar."));
+        }
+      };
+
+      script.onerror = () => {
+        script.remove();
+        done(reject, new Error("Supabase bibliotheek kon niet worden geladen."));
+      };
+
+      document.head.appendChild(script);
+    });
+  }
+
+  async function ensureSupabaseLibrary() {
+    if (window.supabase?.createClient) return;
+
+    const sources = [
+      "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2",
+      "https://unpkg.com/@supabase/supabase-js@2"
+    ];
+
+    let lastError = null;
+
+    for (const source of sources) {
+      try {
+        await loadExternalScript(source);
+        return;
+      } catch (error) {
+        lastError = error;
+        console.warn("Supabase laden mislukt", source, error);
+      }
+    }
+
+    throw lastError ?? new Error("Supabase bibliotheek kon niet worden geladen.");
+  }
+
+  function friendlyConnectionMessage(error) {
+    const raw = String(error?.message ?? error ?? "");
+    const lower = raw.toLowerCase();
+
+    if (
+      raw.includes("Failed to fetch") ||
+      raw.includes("Load failed") ||
+      raw.includes("Network request failed") ||
+      lower.includes("abort") ||
+      lower.includes("duurde te lang")
+    ) {
+      return "De verbinding met Supabase lukte niet binnen 15 seconden. Tik op Opnieuw proberen. Blijft dit gebeuren, controleer dan de Supabase instellingen.";
+    }
+
+    if (
+      lower.includes("anonymous") ||
+      lower.includes("rate limit") ||
+      raw.includes("429")
+    ) {
+      return "Supabase weigert de nieuwe sessie. Controleer bij Authentication of Anonymous aanstaat en controleer de Rate Limits.";
+    }
+
+    return raw ? `Er ging iets mis. ${raw}` : "Er ging iets mis bij het verbinden met Supabase.";
+  }
+
+  function showConnectionError(error) {
+    console.error(error);
+    elements.connectionErrorMessage.textContent = friendlyConnectionMessage(error);
+    showOnly(elements.errorScreen);
+  }
+
   function hasConfiguration() {
     const config = window.APP_CONFIG ?? {};
     return Boolean(
@@ -65,6 +183,7 @@
     [
       elements.setupScreen,
       elements.loadingScreen,
+      elements.errorScreen,
       elements.playerScreen,
       elements.appScreen,
       elements.adminLoginScreen,
@@ -175,7 +294,7 @@
       .from("drinks")
       .select("id, player_id, owner_user_id, drink_type, created_at, players(name)")
       .order("created_at", { ascending: false })
-      .limit(2500);
+      .limit(2000);
 
     if (error) {
       throw error;
@@ -634,31 +753,40 @@
     elements.resetScoresButton.addEventListener("click", resetScores);
     elements.switchPlayerButton.addEventListener("click", switchPlayer);
     elements.refreshButton.addEventListener("click", refreshCurrentView);
+    elements.retryButton.addEventListener("click", initialise);
   }
 
   async function initialise() {
-    bindEvents();
+    showOnly(elements.loadingScreen);
 
     if (!hasConfiguration()) {
       showOnly(elements.setupScreen);
       return;
     }
 
-    const { SUPABASE_URL, SUPABASE_KEY } = window.APP_CONFIG;
-
-    state.client = window.supabase.createClient(
-      SUPABASE_URL,
-      SUPABASE_KEY,
-      {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true
-        }
-      }
-    );
-
     try {
+      await ensureSupabaseLibrary();
+
+      const { SUPABASE_URL, SUPABASE_KEY } = window.APP_CONFIG;
+
+      if (!state.client) {
+        state.client = window.supabase.createClient(
+          SUPABASE_URL,
+          SUPABASE_KEY,
+          {
+            auth: {
+              persistSession: true,
+              autoRefreshToken: true,
+              detectSessionInUrl: true
+            },
+            global: {
+              fetch: (input, init) =>
+                fetchWithTimeout(input, init, REQUEST_TIMEOUT_MS)
+            }
+          }
+        );
+      }
+
       await ensureSession();
       await determineAdminStatus();
 
@@ -670,12 +798,7 @@
 
       subscribeToChanges();
     } catch (error) {
-      console.error(error);
-      showOnly(elements.setupScreen);
-      elements.setupScreen.insertAdjacentHTML(
-        "beforeend",
-        `<p class="message error">Verbinding mislukt. ${escapeHtml(error.message)}</p>`
-      );
+      showConnectionError(error);
     }
   }
 
@@ -688,5 +811,6 @@
       .replaceAll("'", "&#039;");
   }
 
+  bindEvents();
   initialise();
 })();
