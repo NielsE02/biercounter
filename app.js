@@ -1,6 +1,8 @@
 (() => {
   "use strict";
 
+  const RECENT_LIMIT = 50;
+
   const DRINK_TYPES = [
     { key: "bier", label: "Bier", icon: "🍺" },
     { key: "wijn", label: "Wijn", icon: "🍷" },
@@ -13,6 +15,7 @@
     isAdmin: false,
     currentPlayer: null,
     players: [],
+    scores: [],
     drinks: [],
     channel: null
   };
@@ -54,121 +57,6 @@
     drinkButtonTemplate: document.querySelector("#drink-button-template")
   };
 
-  const REQUEST_TIMEOUT_MS = 15000;
-  const SUPABASE_SCRIPT_TIMEOUT_MS = 10000;
-
-  function fetchWithTimeout(input, init = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
-    const controller = new AbortController();
-    const timer = window.setTimeout(() => controller.abort(), timeoutMs);
-
-    if (init.signal) {
-      if (init.signal.aborted) {
-        controller.abort();
-      } else {
-        init.signal.addEventListener("abort", () => controller.abort(), { once: true });
-      }
-    }
-
-    return fetch(input, {
-      ...init,
-      signal: controller.signal
-    }).finally(() => window.clearTimeout(timer));
-  }
-
-  function loadExternalScript(url, timeoutMs = SUPABASE_SCRIPT_TIMEOUT_MS) {
-    return new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      let finished = false;
-
-      const done = (callback, value) => {
-        if (finished) return;
-        finished = true;
-        window.clearTimeout(timer);
-        script.onload = null;
-        script.onerror = null;
-        callback(value);
-      };
-
-      const timer = window.setTimeout(() => {
-        script.remove();
-        done(reject, new Error("Supabase bibliotheek laden duurde te lang."));
-      }, timeoutMs);
-
-      script.src = url;
-      script.async = true;
-
-      script.onload = () => {
-        if (window.supabase?.createClient) {
-          done(resolve);
-        } else {
-          script.remove();
-          done(reject, new Error("Supabase bibliotheek is niet beschikbaar."));
-        }
-      };
-
-      script.onerror = () => {
-        script.remove();
-        done(reject, new Error("Supabase bibliotheek kon niet worden geladen."));
-      };
-
-      document.head.appendChild(script);
-    });
-  }
-
-  async function ensureSupabaseLibrary() {
-    if (window.supabase?.createClient) return;
-
-    const sources = [
-      "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2",
-      "https://unpkg.com/@supabase/supabase-js@2"
-    ];
-
-    let lastError = null;
-
-    for (const source of sources) {
-      try {
-        await loadExternalScript(source);
-        return;
-      } catch (error) {
-        lastError = error;
-        console.warn("Supabase laden mislukt", source, error);
-      }
-    }
-
-    throw lastError ?? new Error("Supabase bibliotheek kon niet worden geladen.");
-  }
-
-  function friendlyConnectionMessage(error) {
-    const raw = String(error?.message ?? error ?? "");
-    const lower = raw.toLowerCase();
-
-    if (
-      raw.includes("Failed to fetch") ||
-      raw.includes("Load failed") ||
-      raw.includes("Network request failed") ||
-      lower.includes("abort") ||
-      lower.includes("duurde te lang")
-    ) {
-      return "De verbinding met Supabase lukte niet binnen 15 seconden. Tik op Opnieuw proberen. Blijft dit gebeuren, controleer dan de Supabase instellingen.";
-    }
-
-    if (
-      lower.includes("anonymous") ||
-      lower.includes("rate limit") ||
-      raw.includes("429")
-    ) {
-      return "Supabase weigert de nieuwe sessie. Controleer bij Authentication of Anonymous aanstaat en controleer de Rate Limits.";
-    }
-
-    return raw ? `Er ging iets mis. ${raw}` : "Er ging iets mis bij het verbinden met Supabase.";
-  }
-
-  function showConnectionError(error) {
-    console.error(error);
-    elements.connectionErrorMessage.textContent = friendlyConnectionMessage(error);
-    showOnly(elements.errorScreen);
-  }
-
   function hasConfiguration() {
     const config = window.APP_CONFIG ?? {};
     return Boolean(
@@ -188,12 +76,13 @@
       elements.appScreen,
       elements.adminLoginScreen,
       elements.adminScreen
-    ].forEach((element) => element.classList.add("hidden"));
+    ].forEach((element) => element?.classList.add("hidden"));
 
-    screen.classList.remove("hidden");
+    screen?.classList.remove("hidden");
   }
 
   function setMessage(element, text, isError = false) {
+    if (!element) return;
     element.textContent = text;
     element.classList.toggle("error", isError);
   }
@@ -219,13 +108,56 @@
     }).format(new Date(isoString));
   }
 
+  function loadExternalScript(url) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = url;
+      script.async = true;
+      script.onload = () =>
+        window.supabase?.createClient
+          ? resolve()
+          : reject(new Error("Supabase bibliotheek is niet beschikbaar."));
+      script.onerror = () =>
+        reject(new Error("Supabase bibliotheek kon niet worden geladen."));
+      document.head.appendChild(script);
+    });
+  }
+
+  async function ensureSupabaseLibrary() {
+    if (window.supabase?.createClient) return;
+
+    const sources = [
+      "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2",
+      "https://unpkg.com/@supabase/supabase-js@2"
+    ];
+
+    let lastError = null;
+
+    for (const source of sources) {
+      try {
+        await loadExternalScript(source);
+        return;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError ?? new Error("Supabase bibliotheek kon niet worden geladen.");
+  }
+
+  function showConnectionError(error) {
+    console.error(error);
+    const message = String(error?.message ?? error ?? "");
+    elements.connectionErrorMessage.textContent =
+      message || "Er ging iets mis bij het verbinden met Supabase.";
+    showOnly(elements.errorScreen);
+  }
+
   async function ensureSession() {
     const { data: sessionData, error: sessionError } =
       await state.client.auth.getSession();
 
-    if (sessionError) {
-      throw sessionError;
-    }
+    if (sessionError) throw sessionError;
 
     if (sessionData.session) {
       state.user = sessionData.session.user;
@@ -233,21 +165,13 @@
     }
 
     const { data, error } = await state.client.auth.signInAnonymously();
-
-    if (error) {
-      throw error;
-    }
-
+    if (error) throw error;
     state.user = data.user;
   }
 
   async function determineAdminStatus() {
     const { data, error } = await state.client.rpc("is_admin");
-
-    if (error) {
-      throw error;
-    }
-
+    if (error) throw error;
     state.isAdmin = data === true;
   }
 
@@ -257,16 +181,10 @@
       .select("id, name, active, created_at")
       .order("name", { ascending: true });
 
-    if (!includeInactive) {
-      query = query.eq("active", true);
-    }
+    if (!includeInactive) query = query.eq("active", true);
 
     const { data, error } = await query;
-
-    if (error) {
-      throw error;
-    }
-
+    if (error) throw error;
     state.players = data ?? [];
   }
 
@@ -277,34 +195,34 @@
       .eq("user_id", state.user.id)
       .maybeSingle();
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
 
     const player = data?.players;
-
     state.currentPlayer =
       player && player.active
         ? { id: player.id, name: player.name }
         : null;
   }
 
-  async function loadDrinks() {
+  async function loadScores() {
+    const { data, error } = await state.client.rpc("get_scoreboard");
+    if (error) throw error;
+    state.scores = data ?? [];
+  }
+
+  async function loadRecentDrinks() {
     const { data, error } = await state.client
       .from("drinks")
       .select("id, player_id, owner_user_id, drink_type, created_at, players(name)")
       .order("created_at", { ascending: false })
-      .limit(2000);
+      .limit(RECENT_LIMIT);
 
-    if (error) {
-      throw error;
-    }
-
+    if (error) throw error;
     state.drinks = data ?? [];
   }
 
   async function loadPlayerApp() {
-    await Promise.all([loadPlayers(false), loadCurrentPlayer(), loadDrinks()]);
+    await Promise.all([loadPlayers(false), loadCurrentPlayer()]);
 
     if (!state.currentPlayer) {
       renderPlayerPicker();
@@ -314,16 +232,37 @@
     }
 
     renderDrinkButtons();
-    renderPlayerView();
+    elements.currentPlayerName.textContent = state.currentPlayer.name;
+    elements.currentPlayerTotal.textContent = "…";
     showOnly(elements.appScreen);
     elements.switchPlayerButton.classList.remove("hidden");
+
+    try {
+      await Promise.all([loadScores(), loadRecentDrinks()]);
+      renderPlayerView();
+    } catch (error) {
+      setMessage(
+        elements.actionMessage,
+        "De stand of recente geschiedenis kon niet volledig laden. Probeer Vernieuwen.",
+        true
+      );
+      console.error(error);
+    }
   }
 
   async function loadAdminApp() {
-    await Promise.all([loadPlayers(true), loadDrinks()]);
-    renderAdminView();
+    await loadPlayers(true);
+    renderAdminPlayers();
     showOnly(elements.adminScreen);
     elements.switchPlayerButton.classList.add("hidden");
+
+    try {
+      await loadRecentDrinks();
+      renderHistory(elements.adminHistoryList, true);
+    } catch (error) {
+      setMessage(elements.adminMessage, "Recente invoer kon niet laden.", true);
+      console.error(error);
+    }
   }
 
   function renderPlayerPicker() {
@@ -392,17 +331,14 @@
     });
 
     if (error) {
-      setMessage(
-        elements.actionMessage,
-        `Toevoegen is niet gelukt. ${error.message}`,
-        true
-      );
+      setMessage(elements.actionMessage, `Toevoegen is niet gelukt. ${error.message}`, true);
       return;
     }
 
     const drink = getDrinkType(drinkType);
     setMessage(elements.actionMessage, `${drink.label} toegevoegd`);
-    await loadDrinks();
+
+    await Promise.all([loadScores(), loadRecentDrinks()]);
     renderPlayerView();
   }
 
@@ -418,11 +354,11 @@
       return;
     }
 
-    await loadDrinks();
-
     if (fromAdmin) {
-      renderAdminView();
+      await loadRecentDrinks();
+      renderHistory(elements.adminHistoryList, true);
     } else {
+      await Promise.all([loadScores(), loadRecentDrinks()]);
       renderPlayerView();
     }
   }
@@ -430,31 +366,23 @@
   function renderPlayerView() {
     elements.currentPlayerName.textContent = state.currentPlayer.name;
 
-    const totals = new Map(state.players.map((player) => [player.id, 0]));
+    const score = state.scores.find(
+      (row) => row.player_id === state.currentPlayer.id
+    );
 
-    state.drinks.forEach((drink) => {
-      totals.set(drink.player_id, (totals.get(drink.player_id) ?? 0) + 1);
-    });
+    elements.currentPlayerTotal.textContent = String(score?.total ?? 0);
 
-    elements.currentPlayerTotal.textContent =
-      totals.get(state.currentPlayer.id) ?? 0;
-
-    renderScoreboard(totals);
+    renderScoreboard();
     renderHistory(elements.historyList, false);
     elements.historyEmpty.classList.toggle("hidden", state.drinks.length > 0);
   }
 
-  function renderScoreboard(totals) {
+  function renderScoreboard() {
     elements.scoreboard.replaceChildren();
 
-    const sortedPlayers = [...state.players].sort((a, b) => {
-      const scoreDifference = (totals.get(b.id) ?? 0) - (totals.get(a.id) ?? 0);
-      return scoreDifference || a.name.localeCompare(b.name, "nl");
-    });
-
-    sortedPlayers.forEach((player, index) => {
-      const row = document.createElement("li");
-      row.className = "score-row";
+    state.scores.forEach((row, index) => {
+      const item = document.createElement("li");
+      item.className = "score-row";
 
       const position = document.createElement("span");
       position.className = "score-position";
@@ -462,14 +390,14 @@
 
       const name = document.createElement("span");
       name.className = "score-name";
-      name.textContent = player.name;
+      name.textContent = row.name;
 
       const count = document.createElement("span");
       count.className = "score-count";
-      count.textContent = String(totals.get(player.id) ?? 0);
+      count.textContent = String(row.total ?? 0);
 
-      row.append(position, name, count);
-      elements.scoreboard.appendChild(row);
+      item.append(position, name, count);
+      elements.scoreboard.appendChild(item);
     });
   }
 
@@ -503,9 +431,7 @@
       main.append(icon, text);
       item.appendChild(main);
 
-      const mayDelete =
-        fromAdmin ||
-        entry.owner_user_id === state.user.id;
+      const mayDelete = fromAdmin || entry.owner_user_id === state.user.id;
 
       if (mayDelete) {
         const deleteButton = document.createElement("button");
@@ -523,11 +449,6 @@
     });
   }
 
-  function renderAdminView() {
-    renderAdminPlayers();
-    renderHistory(elements.adminHistoryList, true);
-  }
-
   function renderAdminPlayers() {
     elements.adminPlayerList.replaceChildren();
 
@@ -536,7 +457,6 @@
       item.className = "admin-item";
 
       const text = document.createElement("div");
-
       const name = document.createElement("div");
       name.className = "admin-item-name";
       name.textContent = player.name;
@@ -573,10 +493,7 @@
       return;
     }
 
-    setMessage(
-      elements.adminMessage,
-      active ? "Speler geactiveerd" : "Speler verborgen"
-    );
+    setMessage(elements.adminMessage, active ? "Speler geactiveerd" : "Speler verborgen");
     await loadPlayers(true);
     renderAdminPlayers();
   }
@@ -584,10 +501,7 @@
   async function handleAddPlayer(event) {
     event.preventDefault();
     const name = normaliseName(elements.newPlayerName.value);
-
-    if (!name) {
-      return;
-    }
+    if (!name) return;
 
     const { error } = await state.client.from("players").insert({ name });
 
@@ -631,11 +545,7 @@
       state.user = null;
       await ensureSession();
       await determineAdminStatus();
-      setMessage(
-        elements.adminLoginMessage,
-        "Dit account heeft geen beheerdersrechten.",
-        true
-      );
+      setMessage(elements.adminLoginMessage, "Dit account heeft geen beheerdersrechten.", true);
       return;
     }
 
@@ -655,18 +565,10 @@
   }
 
   async function resetScores() {
-    const confirmation = window.prompt(
-      'Typ WISSEN om alle scores te verwijderen.'
-    );
+    const confirmation = window.prompt("Typ WISSEN om alle scores te verwijderen.");
+    if (confirmation !== "WISSEN") return;
 
-    if (confirmation !== "WISSEN") {
-      return;
-    }
-
-    const { error } = await state.client
-      .from("drinks")
-      .delete()
-      .gte("id", 0);
+    const { error } = await state.client.from("drinks").delete().gte("id", 0);
 
     if (error) {
       setMessage(elements.adminMessage, error.message, true);
@@ -674,8 +576,8 @@
     }
 
     setMessage(elements.adminMessage, "Alle scores zijn gewist");
-    await loadDrinks();
-    renderAdminView();
+    state.drinks = [];
+    renderHistory(elements.adminHistoryList, true);
   }
 
   async function openAdmin() {
@@ -717,12 +619,16 @@
         "postgres_changes",
         { event: "*", schema: "public", table: "drinks" },
         async () => {
-          await loadDrinks();
-
-          if (state.isAdmin) {
-            renderAdminView();
-          } else if (state.currentPlayer) {
-            renderPlayerView();
+          try {
+            if (state.isAdmin) {
+              await loadRecentDrinks();
+              renderHistory(elements.adminHistoryList, true);
+            } else if (state.currentPlayer) {
+              await Promise.all([loadScores(), loadRecentDrinks()]);
+              renderPlayerView();
+            }
+          } catch (error) {
+            console.error(error);
           }
         }
       )
@@ -730,14 +636,19 @@
         "postgres_changes",
         { event: "*", schema: "public", table: "players" },
         async () => {
-          await loadPlayers(state.isAdmin);
+          try {
+            await loadPlayers(state.isAdmin);
 
-          if (state.isAdmin) {
-            renderAdminPlayers();
-          } else if (!state.currentPlayer) {
-            renderPlayerPicker();
-          } else {
-            renderPlayerView();
+            if (state.isAdmin) {
+              renderAdminPlayers();
+            } else if (!state.currentPlayer) {
+              renderPlayerPicker();
+            } else {
+              await loadScores();
+              renderPlayerView();
+            }
+          } catch (error) {
+            console.error(error);
           }
         }
       )
@@ -767,9 +678,8 @@
     try {
       await ensureSupabaseLibrary();
 
-      const { SUPABASE_URL, SUPABASE_KEY } = window.APP_CONFIG;
-
       if (!state.client) {
+        const { SUPABASE_URL, SUPABASE_KEY } = window.APP_CONFIG;
         state.client = window.supabase.createClient(
           SUPABASE_URL,
           SUPABASE_KEY,
@@ -778,10 +688,6 @@
               persistSession: true,
               autoRefreshToken: true,
               detectSessionInUrl: true
-            },
-            global: {
-              fetch: (input, init) =>
-                fetchWithTimeout(input, init, REQUEST_TIMEOUT_MS)
             }
           }
         );
@@ -800,15 +706,6 @@
     } catch (error) {
       showConnectionError(error);
     }
-  }
-
-  function escapeHtml(value) {
-    return String(value)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
   }
 
   bindEvents();

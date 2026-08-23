@@ -467,3 +467,44 @@ code {
   width: 100%;
   margin-top: 0.35rem;
 }
+
+
+a.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.history-link {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.history-filters {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.history-filters select {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  color: var(--text);
+  background: white;
+  font: inherit;
+}
+
+.load-more-button {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+@media (min-width: 620px) {
+  .history-filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
