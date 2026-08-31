@@ -32,8 +32,11 @@
   const formatNumber = (value, digits = 0) =>
     new Intl.NumberFormat("nl-NL", {
       minimumFractionDigits: digits,
-      maximumFractionDigits: digits
-    }).format(Number(value ?? 0));
+      maximumFractionDigits: digits,
+      useGrouping: false
+    })
+      .format(Number(value ?? 0))
+      .replace(",", ".");
 
   function formatDate(value, withYear = false) {
     if (!value) return "";
