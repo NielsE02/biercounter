@@ -559,3 +559,54 @@ button {
     gap: 1rem;
   }
 }
+
+
+.volume-grid {
+  display: grid;
+  gap: .8rem;
+  margin-top: 1rem;
+}
+
+.volume-stat {
+  padding: 1rem 1.05rem;
+  border-radius: 1.1rem;
+  background: rgba(0,0,0,.09);
+}
+
+.volume-number {
+  display: block;
+  font-size: clamp(4.5rem, 18vw, 8rem);
+  font-weight: 950;
+  line-height: .78;
+  letter-spacing: -.075em;
+}
+
+.volume-unit {
+  display: block;
+  margin-top: .65rem;
+  font-size: clamp(1.5rem, 6vw, 2.6rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -.035em;
+}
+
+.volume-detail {
+  display: block;
+  margin-top: .55rem;
+  font-size: .85rem;
+  font-weight: 850;
+  opacity: .72;
+}
+
+.volume-note {
+  margin: 1rem 0 0;
+  font-size: .78rem;
+  font-weight: 750;
+  opacity: .66;
+}
+
+@media (min-width: 700px) {
+  .volume-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

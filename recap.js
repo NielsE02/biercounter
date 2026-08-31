@@ -393,6 +393,13 @@
     ]);
 
     $("#group-liters").textContent = formatNumber(summary.beer_liters, 1);
+    $("#group-beer-detail").textContent =
+      `${formatNumber(summary.bier)} biertjes × 500 ml`;
+
+    const cocktailLiters = Number(summary.cocktail) * 0.33;
+    $("#group-cocktail-liters").textContent = formatNumber(cocktailLiters, 2);
+    $("#group-cocktail-detail").textContent =
+      `${formatNumber(summary.cocktail)} Frisco flesjes × 330 ml`;
 
     const buddy = summary.top_buddy_pair;
     $("#group-buddy").textContent = `${buddy.player_a} + ${buddy.player_b}`;

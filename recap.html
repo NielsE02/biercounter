@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#101b16">
   <meta name="description" content="De definitieve Biercounter Recap van 2026.">
   <title>Biercounter Recap 2026</title>
-  <link rel="stylesheet" href="recap.css?v=11">
+  <link rel="stylesheet" href="recap.css?v=13">
 </head>
 <body>
   <header class="recap-header">
@@ -155,10 +155,24 @@
 
       <article class="story-card theme-gold">
         <div class="story-inner">
-          <p class="kicker">Bier in volume</p>
-          <div id="group-liters" class="mega-number"></div>
-          <h2>liter bier in 2026</h2>
-          <p class="big-copy">Alle biertjes waren 500 ml.</p>
+          <p class="kicker">Drank in volume</p>
+          <h2>Wat ging er doorheen?</h2>
+
+          <div class="volume-grid">
+            <div class="volume-stat">
+              <span id="group-liters" class="volume-number"></span>
+              <span class="volume-unit">liter bier</span>
+              <span id="group-beer-detail" class="volume-detail"></span>
+            </div>
+
+            <div class="volume-stat">
+              <span id="group-cocktail-liters" class="volume-number"></span>
+              <span class="volume-unit">liter cocktail</span>
+              <span id="group-cocktail-detail" class="volume-detail"></span>
+            </div>
+          </div>
+
+          <p class="volume-note">Wijn is niet omgerekend, omdat het volume per glas niet bekend is.</p>
         </div>
       </article>
 
@@ -205,6 +219,6 @@
   </main>
 
   <script src="config.js"></script>
-  <script src="recap.js?v=12"></script>
+  <script src="recap.js?v=13"></script>
 </body>
 </html>
