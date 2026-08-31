@@ -508,3 +508,29 @@ a.button {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+
+.recap-top-link {
+  text-decoration: none;
+}
+
+.recap-promo {
+  display: grid;
+  gap: 1rem;
+  border-color: rgba(20, 108, 67, 0.25);
+}
+
+.recap-promo .button {
+  width: 100%;
+}
+
+@media (min-width: 620px) {
+  .recap-promo {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+
+  .recap-promo .button {
+    width: auto;
+  }
+}

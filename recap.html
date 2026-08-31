@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101b16">
+  <meta name="description" content="De definitieve Biercounter Recap van 2026.">
+  <title>Biercounter Recap 2026</title>
+  <link rel="stylesheet" href="recap.css?v=10">
+</head>
+<body>
+  <header class="recap-header">
+    <a class="back-link" href="index.html">← Biercounter</a>
+    <div class="recap-progress" id="recap-progress" aria-hidden="true"></div>
+    <button id="change-player" class="header-button hidden" type="button">Andere speler</button>
+  </header>
+
+  <main>
+    <section id="recap-loading" class="recap-state">
+      <div class="recap-loader" aria-hidden="true"></div>
+      <p>Recap laden</p>
+    </section>
+
+    <section id="recap-error" class="recap-state hidden">
+      <p class="kicker">Verbinding</p>
+      <h1>De Recap kon niet laden</h1>
+      <p id="recap-error-message" class="subtle"></p>
+      <button id="recap-retry" class="recap-button" type="button">Opnieuw proberen</button>
+    </section>
+
+    <section id="recap-picker" class="picker-screen hidden">
+      <div class="picker-copy">
+        <p class="kicker">Biercounter 2026</p>
+        <h1>De vakantie zit erop.</h1>
+        <p>Bekijk jouw persoonlijke afsluiting van vier jaar Biercounter.</p>
+      </div>
+
+      <div class="picker-panel">
+        <p class="picker-label">Wie ben je?</p>
+        <div id="recap-player-list" class="recap-player-grid"></div>
+        <button id="open-group-recap" class="group-button" type="button">
+          Bekijk de groepsrecap
+        </button>
+      </div>
+    </section>
+
+    <section id="recap-deck" class="recap-deck hidden" aria-live="polite">
+      <article class="story-card theme-green" data-card="intro">
+        <div class="story-inner">
+          <p class="kicker">Biercounter Recap 2026</p>
+          <p class="story-overline">Dit was de vakantie van</p>
+          <h1 id="intro-name" class="display-name"></h1>
+          <p id="intro-subtitle" class="story-footer-copy"></p>
+        </div>
+      </article>
+
+      <article class="story-card theme-cream" data-card="total">
+        <div class="story-inner">
+          <p class="kicker">Jouw vakantie in één getal</p>
+          <div id="total-number" class="mega-number"></div>
+          <h2>geregistreerde drankjes</h2>
+          <div id="drink-split" class="split-grid"></div>
+        </div>
+      </article>
+
+      <article class="story-card theme-gold" data-card="rank">
+        <div class="story-inner">
+          <p class="kicker">Het klassement</p>
+          <div id="rank-number" class="mega-number"></div>
+          <h2 id="rank-copy"></h2>
+          <p id="rank-share" class="big-copy"></p>
+          <div id="attendance-note" class="note-box hidden"></div>
+        </div>
+      </article>
+
+      <article class="story-card theme-blue" data-card="rhythm">
+        <div class="story-inner">
+          <p class="kicker">Jouw ritme</p>
+          <div class="stat-pair">
+            <div>
+              <span id="avg-per-day" class="stat-value"></span>
+              <span class="stat-label">per vakantiedag</span>
+            </div>
+            <div>
+              <span id="days-present" class="stat-value"></span>
+              <span class="stat-label">dagen aanwezig</span>
+            </div>
+          </div>
+          <p id="peak-day-copy" class="big-copy"></p>
+          <p id="favorite-hour-copy" class="subtle-on-dark"></p>
+        </div>
+      </article>
+
+      <article class="story-card theme-pink" data-card="buddy">
+        <div class="story-inner">
+          <p class="kicker">Jouw drinkmaatje</p>
+          <div class="buddy-icon">↔</div>
+          <h1 id="buddy-name" class="display-name"></h1>
+          <p id="buddy-copy" class="big-copy"></p>
+          <p id="buddy-detail" class="subtle-on-dark"></p>
+        </div>
+      </article>
+
+      <article class="story-card theme-dark" data-card="daily">
+        <div class="story-inner">
+          <p class="kicker">Dag voor dag</p>
+          <h2>Zo liep jouw vakantie.</h2>
+          <div id="daily-chart" class="bar-chart" aria-label="Registraties per dag"></div>
+          <div class="chart-axis">
+            <span id="daily-start"></span>
+            <span id="daily-end"></span>
+          </div>
+        </div>
+      </article>
+
+      <article class="story-card theme-purple" data-card="history">
+        <div class="story-inner">
+          <p class="kicker">De Biercounter jaren</p>
+          <h2 id="history-title"></h2>
+          <div id="history-list" class="history-years"></div>
+          <p id="history-insight" class="big-copy"></p>
+        </div>
+      </article>
+
+      <article class="story-card theme-orange" data-card="final">
+        <div class="story-inner final-card">
+          <div>
+            <p class="kicker">De laatste Biercounter</p>
+            <h1 id="final-name" class="display-name"></h1>
+          </div>
+          <div id="final-stats" class="final-stats"></div>
+          <p class="farewell">2023 → 2026. Vier vakanties. Eén definitieve recap.</p>
+        </div>
+      </article>
+
+      <nav class="story-nav" aria-label="Recap navigatie">
+        <button id="prev-card" type="button">Vorige</button>
+        <button id="next-card" type="button">Volgende</button>
+      </nav>
+    </section>
+
+    <section id="group-deck" class="recap-deck hidden" aria-live="polite">
+      <article class="story-card theme-green">
+        <div class="story-inner">
+          <p class="kicker">Groepsrecap 2026</p>
+          <h1 class="display-name">Wat een hork</h1>
+          <p class="story-footer-copy">De laatste vakantie van de Biercounter.</p>
+        </div>
+      </article>
+
+      <article class="story-card theme-cream">
+        <div class="story-inner">
+          <p class="kicker">Samen geregistreerd</p>
+          <div id="group-total" class="mega-number"></div>
+          <h2>drankjes</h2>
+          <div id="group-split" class="split-grid"></div>
+        </div>
+      </article>
+
+      <article class="story-card theme-gold">
+        <div class="story-inner">
+          <p class="kicker">Bier in volume</p>
+          <div id="group-liters" class="mega-number"></div>
+          <h2>liter bier in 2026</h2>
+          <p class="big-copy">Alle biertjes waren 500 ml.</p>
+        </div>
+      </article>
+
+      <article class="story-card theme-pink">
+        <div class="story-inner">
+          <p class="kicker">De sterkste combinatie</p>
+          <h1 id="group-buddy" class="display-name"></h1>
+          <p id="group-buddy-copy" class="big-copy"></p>
+        </div>
+      </article>
+
+      <article class="story-card theme-dark">
+        <div class="story-inner">
+          <p class="kicker">De vakantie per dag</p>
+          <div id="group-daily-chart" class="bar-chart"></div>
+          <p id="group-peak-copy" class="big-copy"></p>
+        </div>
+      </article>
+
+      <article class="story-card theme-purple">
+        <div class="story-inner">
+          <p class="kicker">Vier jaar bier</p>
+          <h2>Volume per vakantie</h2>
+          <div id="group-history" class="history-years"></div>
+          <p class="fine-print">Alleen bier is in liters vergeleken. Wijn en cocktails zijn niet omgerekend.</p>
+        </div>
+      </article>
+
+      <article class="story-card theme-orange">
+        <div class="story-inner final-card">
+          <div>
+            <p class="kicker">Einde van een tijdperk</p>
+            <h1 class="display-name">Biercounter<br>2023–2026</h1>
+          </div>
+          <p class="farewell">De telling stopt hier. De cijfers blijven.</p>
+        </div>
+      </article>
+
+      <nav class="story-nav" aria-label="Groepsrecap navigatie">
+        <button id="group-prev-card" type="button">Vorige</button>
+        <button id="group-next-card" type="button">Volgende</button>
+      </nav>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="recap.js?v=10"></script>
+</body>
+</html>

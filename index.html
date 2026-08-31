@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f6f3eb">
   <meta name="description" content="Een eenvoudige vakantieteller voor een besloten vriendengroep.">
   <title>Wat een hork</title>
-  <link rel="stylesheet" href="styles.css?v=8">
+  <link rel="stylesheet" href="styles.css?v=10">
 </head>
 <body>
   <header class="topbar">
@@ -15,6 +15,7 @@
       <h1>Wat een hork</h1>
     </div>
     <div class="topbar-actions">
+      <a class="button button-primary recap-top-link" href="recap.html">Recap</a>
       <button id="switch-player-button" class="button button-quiet hidden" type="button">
         Andere speler
       </button>
@@ -83,6 +84,15 @@
         </div>
         <div id="drink-buttons" class="drink-grid"></div>
         <p id="action-message" class="message" aria-live="polite"></p>
+      </section>
+
+      <section class="panel recap-promo">
+        <div>
+          <p class="eyebrow">Vakantie voorbij</p>
+          <h2>Bekijk jouw Biercounter Recap</h2>
+          <p class="muted">Jouw cijfers, drinkmaatje, dagritme en de vakanties van 2023 tot en met 2026.</p>
+        </div>
+        <a class="button button-primary" href="recap.html">Open mijn Recap</a>
       </section>
 
       <section class="panel">
@@ -195,6 +205,6 @@
     </button>
   </template>
   <script src="config.js"></script>
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>
