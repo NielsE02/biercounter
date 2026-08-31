@@ -357,21 +357,27 @@ button {
 
 .bar-chart {
   display: flex;
-  align-items: end;
-  gap: .28rem;
-  min-height: 250px;
+  align-items: stretch;
+  gap: .22rem;
+  min-height: 285px;
   margin-top: 1.5rem;
   padding-top: 1rem;
-  border-bottom: 1px solid rgba(255,255,255,.25);
 }
 
 .bar-column {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  grid-template-rows: 230px 42px;
+  gap: .45rem;
+}
+
+.bar-area {
   position: relative;
   display: flex;
   min-width: 0;
-  flex: 1;
   align-items: end;
-  height: 230px;
+  border-bottom: 1px solid rgba(255,255,255,.25);
 }
 
 .bar {
@@ -389,19 +395,48 @@ button {
 
 .bar-label {
   position: absolute;
-  inset: auto 50% calc(100% + .25rem) auto;
+  right: 50%;
+  bottom: calc(100% + .25rem);
   transform: translateX(50%);
   font-size: .65rem;
   font-weight: 900;
 }
 
-.chart-axis {
+.bar-date {
   display: flex;
-  justify-content: space-between;
-  margin-top: .45rem;
-  color: rgba(255,255,255,.6);
-  font-size: .75rem;
-  font-weight: 700;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  color: rgba(255,255,255,.72);
+  font-size: clamp(.48rem, 1.7vw, .65rem);
+  line-height: 1.05;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.bar-date span {
+  text-transform: lowercase;
+}
+
+.bar-date strong {
+  margin-top: .18rem;
+  color: white;
+  font-weight: 900;
+}
+
+@media (max-width: 430px) {
+  .bar-chart {
+    gap: .12rem;
+  }
+
+  .bar-column {
+    grid-template-rows: 210px 38px;
+  }
+
+  .bar-date {
+    font-size: .48rem;
+  }
 }
 
 .history-years {

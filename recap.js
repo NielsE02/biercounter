@@ -155,6 +155,18 @@
     });
   }
 
+  function chartDateParts(value) {
+    const date = new Date(`${value}T12:00:00`);
+    const weekday = new Intl.DateTimeFormat("nl-NL", {
+      weekday: "short"
+    }).format(date).replace(".", "");
+
+    return {
+      weekday,
+      date: `${date.getDate()}/${date.getMonth() + 1}`
+    };
+  }
+
   function renderBars(container, daily) {
     container.replaceChildren();
     const max = Math.max(1, ...daily.map((item) => Number(item.total)));
@@ -164,6 +176,9 @@
       const column = document.createElement("div");
       column.className = `bar-column${Number(item.total) === peak ? " peak" : ""}`;
 
+      const barArea = document.createElement("div");
+      barArea.className = "bar-area";
+
       const bar = document.createElement("div");
       bar.className = "bar";
       bar.style.height = `${Math.max(2, (Number(item.total) / max) * 100)}%`;
@@ -172,10 +187,19 @@
         const label = document.createElement("span");
         label.className = "bar-label";
         label.textContent = item.total;
-        column.appendChild(label);
+        barArea.appendChild(label);
       }
 
-      column.appendChild(bar);
+      const dateParts = chartDateParts(item.day);
+      const dateLabel = document.createElement("div");
+      dateLabel.className = "bar-date";
+      dateLabel.innerHTML = `
+        <span>${dateParts.weekday}</span>
+        <strong>${dateParts.date}</strong>
+      `;
+
+      barArea.appendChild(bar);
+      column.append(barArea, dateLabel);
       container.appendChild(column);
     });
   }
@@ -291,8 +315,6 @@
     }
 
     renderBars($("#daily-chart"), player.daily);
-    $("#daily-start").textContent = formatDate(player.attendance_start);
-    $("#daily-end").textContent = formatDate(player.attendance_end);
 
     renderHistory(player);
 
