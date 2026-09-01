@@ -367,7 +367,7 @@
   }
 
   function renderPicker() {
-    stopMusicForPicker();
+    setMusicTrack("groep", false);
     elements.playerList.replaceChildren();
 
     [...state.data.players]
@@ -917,7 +917,7 @@
     elements.changePlayer.classList.remove("hidden");
     showOnly(elements.groupDeck);
     updateGroupCard();
-    setMusicTrack("groep", true);
+    setMusicTrack("groep", false);
     playOpeningSound();
   }
 
