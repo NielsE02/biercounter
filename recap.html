@@ -6,13 +6,16 @@
   <meta name="theme-color" content="#101b16">
   <meta name="description" content="De definitieve Biercounter Recap van 2026.">
   <title>Biercounter Recap 2026</title>
-  <link rel="stylesheet" href="recap.css?v=16">
+  <link rel="stylesheet" href="recap.css?v=17">
 </head>
 <body>
   <header class="recap-header">
     <a class="back-link" href="index.html">← Biercounter</a>
     <div class="recap-progress" id="recap-progress" aria-hidden="true"></div>
-    <button id="change-player" class="header-button hidden" type="button">Andere speler</button>
+    <div class="header-actions">
+      <button id="sound-toggle" class="header-button sound-button" type="button" aria-pressed="false">Geluid uit</button>
+      <button id="change-player" class="header-button hidden" type="button">Andere speler</button>
+    </div>
   </header>
 
   <main>
@@ -41,6 +44,7 @@
         <button id="open-group-recap" class="group-button" type="button">
           Bekijk de groepsrecap
         </button>
+        <p class="sound-hint">Tip: zet rechtsboven geluid aan voor de volledige Recap-ervaring.</p>
       </div>
     </section>
 
@@ -257,6 +261,6 @@
   </main>
 
   <script src="config.js"></script>
-  <script src="recap.js?v=16"></script>
+  <script src="recap.js?v=17"></script>
 </body>
 </html>

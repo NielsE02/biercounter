@@ -8,7 +8,11 @@
     player: null,
     cardIndex: 0,
     groupIndex: 0,
-    mode: "picker"
+    mode: "picker",
+    soundEnabled: false,
+    audioContext: null,
+    ambientTimer: null,
+    transitionLock: false
   };
 
   const $ = (selector) => document.querySelector(selector);
@@ -24,6 +28,7 @@
     groupDeck: $("#group-deck"),
     progress: $("#recap-progress"),
     changePlayer: $("#change-player"),
+    soundToggle: $("#sound-toggle"),
     prev: $("#prev-card"),
     next: $("#next-card"),
     groupPrev: $("#group-prev-card"),
@@ -52,6 +57,137 @@
     const h = String(Number(hour)).padStart(2, "0");
     const next = String((Number(hour) + 1) % 24).padStart(2, "0");
     return `${h}.00–${next}.00`;
+  }
+
+  function ensureAudioContext() {
+    if (!state.audioContext) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return null;
+      state.audioContext = new AudioContext();
+    }
+
+    if (state.audioContext.state === "suspended") {
+      state.audioContext.resume().catch(() => {});
+    }
+
+    return state.audioContext;
+  }
+
+  function softTone(frequency, duration = 0.16, volume = 0.025, delay = 0) {
+    if (!state.soundEnabled) return;
+    const ctx = ensureAudioContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime + delay;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(frequency, now);
+    osc.frequency.exponentialRampToValueAtTime(frequency * 1.08, now + duration);
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(volume, now + 0.025);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + duration + 0.02);
+  }
+
+  function playTransitionSound(direction = 1) {
+    if (!state.soundEnabled) return;
+    const base = direction > 0 ? 330 : 260;
+    softTone(base, 0.15, 0.018, 0);
+    softTone(base * 1.5, 0.18, 0.014, 0.06);
+  }
+
+  function playOpeningSound() {
+    if (!state.soundEnabled) return;
+    softTone(220, 0.28, 0.02, 0);
+    softTone(330, 0.32, 0.018, 0.12);
+    softTone(440, 0.36, 0.016, 0.24);
+  }
+
+  function stopAmbient() {
+    if (state.ambientTimer) {
+      clearInterval(state.ambientTimer);
+      state.ambientTimer = null;
+    }
+  }
+
+  function startAmbient() {
+    stopAmbient();
+    if (!state.soundEnabled) return;
+
+    // Zachte, langzame akkoordpuls. Geen extern audiobestand nodig.
+    const notes = [
+      [110, 164.81, 220],
+      [98, 146.83, 196],
+      [123.47, 185, 246.94],
+      [82.41, 123.47, 164.81]
+    ];
+    let step = 0;
+
+    const pulse = () => {
+      if (!state.soundEnabled) return;
+      const chord = notes[step % notes.length];
+      chord.forEach((freq, index) => softTone(freq, 1.75, 0.006, index * 0.035));
+      step += 1;
+    };
+
+    pulse();
+    state.ambientTimer = setInterval(pulse, 2200);
+  }
+
+  function updateSoundButton() {
+    elements.soundToggle.textContent = state.soundEnabled ? "Geluid aan" : "Geluid uit";
+    elements.soundToggle.setAttribute("aria-pressed", String(state.soundEnabled));
+    elements.soundToggle.classList.toggle("sound-on", state.soundEnabled);
+  }
+
+  function toggleSound() {
+    state.soundEnabled = !state.soundEnabled;
+    localStorage.setItem("biercounter-recap-sound", state.soundEnabled ? "1" : "0");
+    updateSoundButton();
+
+    if (state.soundEnabled) {
+      ensureAudioContext();
+      playOpeningSound();
+      startAmbient();
+    } else {
+      stopAmbient();
+    }
+  }
+
+  function animateCards(cards, oldIndex, newIndex, direction) {
+    return new Promise((resolve) => {
+      const oldCard = cards[oldIndex];
+      const newCard = cards[newIndex];
+
+      if (!oldCard || !newCard || oldCard === newCard) {
+        resolve();
+        return;
+      }
+
+      const leaveClass = direction > 0 ? "leaving-left" : "leaving-right";
+      const enterClass = direction > 0 ? "entering-right" : "entering-left";
+
+      newCard.classList.add("active", enterClass);
+      oldCard.classList.add(leaveClass);
+
+      requestAnimationFrame(() => {
+        newCard.classList.add("transition-go");
+        oldCard.classList.add("transition-go");
+      });
+
+      window.setTimeout(() => {
+        oldCard.classList.remove("active", leaveClass, "transition-go");
+        newCard.classList.remove(enterClass, "transition-go");
+        resolve();
+      }, 720);
+    });
   }
 
   function showOnly(target) {
@@ -578,6 +714,7 @@
     elements.changePlayer.classList.remove("hidden");
     showOnly(elements.deck);
     updatePlayerCard();
+    playOpeningSound();
   }
 
   function playerCards() {
@@ -672,6 +809,7 @@
     elements.changePlayer.classList.remove("hidden");
     showOnly(elements.groupDeck);
     updateGroupCard();
+    playOpeningSound();
   }
 
   function updateGroupCard() {
@@ -682,24 +820,56 @@
     renderProgress(state.groupIndex, cards.length);
   }
 
-  function nextPlayerCard(direction) {
+  async function nextPlayerCard(direction) {
+    if (state.transitionLock) return;
+
     const cards = playerCards();
+
     if (direction > 0 && state.cardIndex === cards.length - 1) {
       renderPicker();
       return;
     }
-    state.cardIndex = Math.max(0, Math.min(cards.length - 1, state.cardIndex + direction));
-    updatePlayerCard();
+
+    const oldIndex = state.cardIndex;
+    const newIndex = Math.max(0, Math.min(cards.length - 1, oldIndex + direction));
+    if (newIndex === oldIndex) return;
+
+    state.transitionLock = true;
+    playTransitionSound(direction);
+
+    state.cardIndex = newIndex;
+    renderProgress(state.cardIndex, cards.length);
+    elements.prev.disabled = state.cardIndex === 0;
+    elements.next.textContent = state.cardIndex === cards.length - 1 ? "Klaar" : "Volgende";
+
+    await animateCards(cards, oldIndex, newIndex, direction);
+    state.transitionLock = false;
   }
 
-  function nextGroupCard(direction) {
-    const cards = elements.groupDeck.querySelectorAll(".story-card");
+  async function nextGroupCard(direction) {
+    if (state.transitionLock) return;
+
+    const cards = [...elements.groupDeck.querySelectorAll(".story-card")];
+
     if (direction > 0 && state.groupIndex === cards.length - 1) {
       renderPicker();
       return;
     }
-    state.groupIndex = Math.max(0, Math.min(cards.length - 1, state.groupIndex + direction));
-    updateGroupCard();
+
+    const oldIndex = state.groupIndex;
+    const newIndex = Math.max(0, Math.min(cards.length - 1, oldIndex + direction));
+    if (newIndex === oldIndex) return;
+
+    state.transitionLock = true;
+    playTransitionSound(direction);
+
+    state.groupIndex = newIndex;
+    renderProgress(state.groupIndex, cards.length);
+    elements.groupPrev.disabled = state.groupIndex === 0;
+    elements.groupNext.textContent = state.groupIndex === cards.length - 1 ? "Klaar" : "Volgende";
+
+    await animateCards(cards, oldIndex, newIndex, direction);
+    state.transitionLock = false;
   }
 
   async function initialise() {
@@ -742,13 +912,36 @@
     }
   }
 
+  state.soundEnabled = localStorage.getItem("biercounter-recap-sound") === "1";
+  updateSoundButton();
+
+  elements.soundToggle.addEventListener("click", toggleSound);
+
   elements.retry.addEventListener("click", initialise);
   elements.groupButton.addEventListener("click", openGroup);
   elements.changePlayer.addEventListener("click", renderPicker);
-  elements.prev.addEventListener("click", () => nextPlayerCard(-1));
-  elements.next.addEventListener("click", () => nextPlayerCard(1));
-  elements.groupPrev.addEventListener("click", () => nextGroupCard(-1));
-  elements.groupNext.addEventListener("click", () => nextGroupCard(1));
+  const resumeSoundFromGesture = () => {
+    if (!state.soundEnabled) return;
+    ensureAudioContext();
+    if (!state.ambientTimer) startAmbient();
+  };
+
+  elements.prev.addEventListener("click", () => {
+    resumeSoundFromGesture();
+    nextPlayerCard(-1);
+  });
+  elements.next.addEventListener("click", () => {
+    resumeSoundFromGesture();
+    nextPlayerCard(1);
+  });
+  elements.groupPrev.addEventListener("click", () => {
+    resumeSoundFromGesture();
+    nextGroupCard(-1);
+  });
+  elements.groupNext.addEventListener("click", () => {
+    resumeSoundFromGesture();
+    nextGroupCard(1);
+  });
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "ArrowRight") {
