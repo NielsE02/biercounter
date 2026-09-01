@@ -298,6 +298,60 @@
     };
   }
 
+  function compactRecord(player) {
+    const extra = extraForPlayer(player);
+
+    if (!extra) {
+      return `${formatNumber(player.avg_per_day, 1)} per vakantiedag`;
+    }
+
+    const summaries = {
+      Alena: `+${extra.half_change} in de tweede helft`,
+      Jurjen: `${formatNumber(extra.night_pct, 1)}% tussen 00.00 en 05.00`,
+      Mike: `${extra.buddy_avg_seconds} sec gemiddeld met ${extra.buddy_name}`,
+      Milan: `${player.favorite_hour_total} registraties tussen 02.00 en 03.00`,
+      Niels: `${extra.night_count} registraties tussen 00.00 en 05.00`,
+      Ramon: `${extra.buddy_matches} keer binnen 5 min met ${extra.buddy_name}`,
+      Rogier: `${extra.min_day}–${extra.max_day} per dag`,
+      Rutger: `${extra.min_day}–${extra.max_day} per dag, kleinste schommeling`,
+      Yordan: `${extra.min_day}–${extra.max_day} per dag in ${player.days_present} dagen`
+    };
+
+    return summaries[player.name] ?? `${extra.min_day}–${extra.max_day} per dag`;
+  }
+
+  function renderGroupRecords() {
+    const list = $("#group-records-list");
+    list.replaceChildren();
+
+    [...state.data.players]
+      .sort((a, b) => Number(a.rank) - Number(b.rank))
+      .forEach((player) => {
+        const record = personalRecord(player);
+        const row = document.createElement("div");
+        row.className = "group-record-row";
+
+        const name = document.createElement("strong");
+        name.className = "group-record-name";
+        name.textContent = player.name;
+
+        const text = document.createElement("div");
+        text.className = "group-record-text";
+
+        const title = document.createElement("span");
+        title.className = "group-record-title";
+        title.textContent = record.title;
+
+        const detail = document.createElement("span");
+        detail.className = "group-record-detail";
+        detail.textContent = compactRecord(player);
+
+        text.append(title, detail);
+        row.append(name, text);
+        list.appendChild(row);
+      });
+  }
+
   function hasPreviousHistory(player) {
     return (player.history ?? []).some((item) => Number(item.year) < 2026);
   }
@@ -612,6 +666,7 @@
         `Op ${momentDay} rond ${momentTime} registreerde de hele groep vrijwel tegelijk.`;
     }
 
+    renderGroupRecords();
     renderGroupHistory();
 
     elements.changePlayer.classList.remove("hidden");
