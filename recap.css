@@ -657,3 +657,5 @@ button {
   line-height: .8;
   letter-spacing: -.08em;
 }
+
+.story-card.excluded { display: none !important; }

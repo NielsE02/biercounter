@@ -243,115 +243,118 @@
       };
     }
 
-    if (extra.night_rank === 1) {
-      return {
+    const records = {
+      Alena: {
+        title: "Grootste eindsprint",
+        copy: `In de tweede helft kwamen er ${extra.half_change} registraties bij ten opzichte van de eerste helft.`,
+        detail: `${extra.first_half} in de eerste helft, ${extra.second_half} in de tweede. De grootste positieve verschuiving van de groep.`
+      },
+      Jurjen: {
         title: "Nachtuil van de groep",
         copy: `${formatNumber(extra.night_pct, 1)}% van jouw registraties viel tussen 00.00 en 05.00.`,
-        detail: `${extra.night_count} registraties na middernacht. Het hoogste aandeel van iedereen.`
-      };
-    }
-
-    if (extra.consistency_rank === 1) {
-      return {
-        title: "Meest constante ritme",
-        copy: "Jouw dagen lagen dichter bij elkaar dan die van alle andere spelers.",
-        detail: `Je laagste dag was ${extra.min_day}, je hoogste ${extra.max_day}.`
-      };
-    }
-
-    if (extra.night_rank === 2) {
-      return {
-        title: "Bijna altijd nachtwerk",
-        copy: `${formatNumber(extra.night_pct, 1)}% van jouw registraties viel tussen 00.00 en 05.00.`,
-        detail: `${extra.night_count} nachtelijke registraties in ${player.days_present} dagen.`
-      };
-    }
-
-    if (extra.buddy_avg_seconds !== null && Number(extra.buddy_avg_seconds) <= 65) {
-      return {
-        title: "Strakste timing",
+        detail: `${extra.night_count} nachtelijke registraties. Het hoogste aandeel van iedereen.`
+      },
+      Mike: {
+        title: "Kortste klik",
         copy: `Met ${extra.buddy_name} zat er gemiddeld maar ${extra.buddy_avg_seconds} seconden tussen jullie gekoppelde registraties.`,
-        detail: `${extra.buddy_matches} keer binnen vijf minuten.`
-      };
-    }
-
-    if (Number(extra.favorite_hour) === 2) {
-      return {
+        detail: `${extra.buddy_matches} keer binnen vijf minuten. Niemand zat gemiddeld dichter op zijn vaste drinkmaatje.`
+      },
+      Milan: {
         title: "02.00 was jouw uur",
-        copy: "Jouw meest voorkomende tijdvak was 02.00–03.00.",
-        detail: "Daar vielen meer van jouw registraties dan in ieder ander uur."
-      };
-    }
-
-    if (Number(extra.half_change) >= 7) {
-      return {
-        title: "Sterke tweede helft",
-        copy: `In de tweede helft registreerde je ${extra.half_change} drankjes meer dan in de eerste helft.`,
-        detail: `${extra.first_half} in de eerste helft, ${extra.second_half} in de tweede.`
-      };
-    }
-
-    if (Number(extra.half_change) <= -15) {
-      return {
-        title: "Vroege piek",
-        copy: "De eerste helft van jouw vakantie lag duidelijk hoger.",
-        detail: `${extra.first_half} registraties in de eerste helft tegenover ${extra.second_half} in de tweede.`
-      };
-    }
-
-    if (extra.night_count_rank <= 3) {
-      return {
-        title: "Veel na middernacht",
+        copy: `Jouw meest voorkomende tijdvak was 02.00–03.00.`,
+        detail: `${player.favorite_hour_total} registraties vielen in dat uur.`
+      },
+      Niels: {
+        title: "Meeste nachtwerk",
         copy: `${extra.night_count} registraties tussen 00.00 en 05.00.`,
-        detail: `Dat was ${formatNumber(extra.night_pct, 1)}% van jouw totaal.`
-      };
-    }
+        detail: `${formatNumber(extra.night_pct, 1)}% van jouw totaal. In absolute aantallen het meeste van de groep.`
+      },
+      Ramon: {
+        title: "Meest in sync",
+        copy: `Bij ${extra.buddy_matches} van jouw registraties zat ${extra.buddy_name} binnen vijf minuten.`,
+        detail: `${formatNumber(player.buddy?.pct_of_entries ?? 0, 1)}% van jouw vakantie. Het hoogste aandeel van de groep.`
+      },
+      Rogier: {
+        title: "De stille constante",
+        copy: `Je dagtotalen bleven opvallend dicht bij elkaar.`,
+        detail: `Van ${extra.min_day} op je rustigste dag tot ${extra.max_day} op je drukste. Alleen Rutger was nog gelijkmatiger.`
+      },
+      Rutger: {
+        title: "Meest constante ritme",
+        copy: `Jouw dagtotalen schommelden het minst van iedereen.`,
+        detail: `Je laagste dag was ${extra.min_day}, je hoogste ${extra.max_day}.`
+      },
+      Yordan: {
+        title: "Wildste dagritme",
+        copy: `Bij niemand liepen rustige en drukke dagen verder uiteen.`,
+        detail: `Van ${extra.min_day} op je rustigste dag tot ${extra.max_day} op je drukste, in slechts ${player.days_present} vakantiedagen.`
+      }
+    };
 
-    return {
+    return records[player.name] ?? {
       title: "Jouw opvallendste ritme",
       copy: `${extra.min_day} op je rustigste dag, ${extra.max_day} op je drukste.`,
       detail: `Je favoriete uur was ${hourLabel(extra.favorite_hour)}.`
     };
   }
 
+  function hasPreviousHistory(player) {
+    return (player.history ?? []).some((item) => Number(item.year) < 2026);
+  }
+
   function renderCareer(player) {
-    const years = (player.history ?? []).filter((item) => item.category === "beer");
     const careerGrid = $("#career-grid");
     careerGrid.replaceChildren();
 
-    const beer500Years = years.filter((item) => Number(item.beer_ml) === 500);
-    const beer250Years = years.filter((item) => Number(item.beer_ml) === 250);
-
-    const count500 = beer500Years.reduce((sum, item) => sum + Number(item.count ?? 0), 0);
-    const count250 = beer250Years.reduce((sum, item) => sum + Number(item.count ?? 0), 0);
-    const liters250 = beer250Years.reduce((sum, item) => sum + Number(item.liters ?? 0), 0);
+    const allHistory = player.history ?? [];
+    const years = allHistory.filter((item) => item.category === "beer");
+    const minYear = Math.min(...allHistory.map((item) => Number(item.year)));
+    const maxYear = Math.max(...allHistory.map((item) => Number(item.year)));
 
     if (player.history_category !== "beer" || years.length === 0) {
-      $("#career-title").textContent = "Jouw geregistreerde jaren";
-      const total = (player.history ?? []).reduce((sum, item) => sum + Number(item.count ?? 0), 0);
-      careerGrid.innerHTML = `
-        <div class="career-stat">
-          <strong>${formatNumber(total)}</strong>
-          <span>registraties over alle bekende vakanties</span>
-        </div>
-        <div class="career-stat">
-          <strong>${player.history?.length ?? 0}</strong>
-          <span>vakanties vastgelegd</span>
-        </div>
-      `;
-      $("#career-note").textContent = "Geen liter- of kratomrekening voor wijn en cocktails.";
+      const total = allHistory.reduce((sum, item) => sum + Number(item.count ?? 0), 0);
+
+      $("#career-title").textContent =
+        minYear === maxYear ? `${player.name}, ${maxYear}` : `${player.name}, ${minYear}–${maxYear}`;
+
+      const stats = [
+        [formatNumber(total), "registraties in bekende vakanties"],
+        [formatNumber(allHistory.length), "vakanties vastgelegd"]
+      ];
+
+      stats.forEach(([value, label]) => {
+        const item = document.createElement("div");
+        item.className = "career-stat";
+        item.innerHTML = `<strong>${value}</strong><span>${label}</span>`;
+        careerGrid.appendChild(item);
+      });
+
+      $("#career-note").textContent = "";
       return;
     }
 
+    const beer500Years = years.filter((item) => Number(item.beer_ml) === 500);
+    const beer250Years = years.filter((item) => Number(item.beer_ml) === 250);
+    const count500 = beer500Years.reduce((sum, item) => sum + Number(item.count ?? 0), 0);
+    const count250 = beer250Years.reduce((sum, item) => sum + Number(item.count ?? 0), 0);
     const totalLiters = years.reduce((sum, item) => sum + Number(item.liters ?? 0), 0);
     const totalBeer = years.reduce((sum, item) => sum + Number(item.count ?? 0), 0);
 
+    $("#career-title").textContent =
+      minYear === maxYear ? `${player.name}, ${maxYear}` : `${player.name}, ${minYear}–${maxYear}`;
+
     const stats = [
-      [formatNumber(totalBeer), "bier in alle bekende jaren"],
-      [`${formatNumber(totalLiters, totalLiters % 1 ? 2 : 0)} L`, "totaal biervolume"],
-      [crateLabel(count500), "500 ml-bier omgerekend"],
-      [formatNumber(count250), "250 ml-bier in 2025"]
+      [formatNumber(totalBeer), "bier totaal"],
+      [`${formatNumber(totalLiters, totalLiters % 1 ? 2 : 0)} L`, "biervolume totaal"]
     ];
+
+    if (count500 > 0) {
+      stats.push([crateLabel(count500), "500 ml-jaren"]);
+    }
+
+    if (count250 > 0) {
+      stats.push([`${formatNumber(count250)} × 250 ml`, "Frankrijk 2025"]);
+    }
 
     stats.forEach(([value, label]) => {
       const item = document.createElement("div");
@@ -360,11 +363,7 @@
       careerGrid.appendChild(item);
     });
 
-    $("#career-title").textContent = `${player.name}, 2023–2026`;
-    $("#career-note").textContent =
-      count250 > 0
-        ? `2025 blijft apart: ${formatNumber(count250)} × 250 ml = ${formatNumber(liters250, liters250 % 1 ? 2 : 0)} liter.`
-        : "Alle bekende biertjes waren 500 ml.";
+    $("#career-note").textContent = "";
   }
 
   function bestHistoryInsight(player) {
@@ -485,6 +484,12 @@
 
     renderHistory(player);
 
+    const showPreviousYears = hasPreviousHistory(player);
+    const historyCard = elements.deck.querySelector('[data-card="history"]');
+    const careerCard = elements.deck.querySelector('[data-card="career"]');
+    historyCard?.classList.toggle("excluded", !showPreviousYears);
+    careerCard?.classList.toggle("excluded", !showPreviousYears);
+
     const record = personalRecord(player);
     $("#record-title").textContent = record.title;
     $("#record-copy").textContent = record.copy;
@@ -521,9 +526,17 @@
     updatePlayerCard();
   }
 
+  function playerCards() {
+    return [...elements.deck.querySelectorAll(".story-card:not(.excluded)")];
+  }
+
   function updatePlayerCard() {
-    const cards = [...elements.deck.querySelectorAll(".story-card")];
-    cards.forEach((card, index) => card.classList.toggle("active", index === state.cardIndex));
+    const allCards = [...elements.deck.querySelectorAll(".story-card")];
+    const cards = playerCards();
+
+    allCards.forEach((card) => card.classList.remove("active"));
+    cards[state.cardIndex]?.classList.add("active");
+
     elements.prev.disabled = state.cardIndex === 0;
     elements.next.textContent = state.cardIndex === cards.length - 1 ? "Klaar" : "Volgende";
     renderProgress(state.cardIndex, cards.length);
@@ -615,7 +628,7 @@
   }
 
   function nextPlayerCard(direction) {
-    const cards = elements.deck.querySelectorAll(".story-card");
+    const cards = playerCards();
     if (direction > 0 && state.cardIndex === cards.length - 1) {
       renderPicker();
       return;
