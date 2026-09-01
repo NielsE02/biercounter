@@ -11,7 +11,9 @@
     mode: "picker",
     soundEnabled: false,
     audioContext: null,
-    ambientTimer: null,
+    music: null,
+    musicKey: null,
+    musicFadeTimer: null,
     transitionLock: false
   };
 
@@ -110,36 +112,133 @@
     softTone(440, 0.36, 0.016, 0.24);
   }
 
-  function stopAmbient() {
-    if (state.ambientTimer) {
-      clearInterval(state.ambientTimer);
-      state.ambientTimer = null;
+  function playerMusicKey(name) {
+    return String(name ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "");
+  }
+
+  function musicPath(key) {
+    return `audio/${key}.mp3`;
+  }
+
+  function clearMusicFade() {
+    if (state.musicFadeTimer) {
+      clearInterval(state.musicFadeTimer);
+      state.musicFadeTimer = null;
     }
   }
 
-  function startAmbient() {
-    stopAmbient();
-    if (!state.soundEnabled) return;
+  function pauseMusic(reset = false) {
+    clearMusicFade();
 
-    // Zachte, langzame akkoordpuls. Geen extern audiobestand nodig.
-    const notes = [
-      [110, 164.81, 220],
-      [98, 146.83, 196],
-      [123.47, 185, 246.94],
-      [82.41, 123.47, 164.81]
-    ];
-    let step = 0;
+    if (!state.music) return;
 
-    const pulse = () => {
-      if (!state.soundEnabled) return;
-      const chord = notes[step % notes.length];
-      chord.forEach((freq, index) => softTone(freq, 1.75, 0.006, index * 0.035));
-      step += 1;
+    state.music.pause();
+
+    if (reset) {
+      try {
+        state.music.currentTime = 0;
+      } catch (_) {}
+    }
+  }
+
+  function fadeOutMusic(callback) {
+    clearMusicFade();
+
+    if (!state.music || state.music.paused) {
+      callback?.();
+      return;
+    }
+
+    let volume = state.music.volume;
+    const step = Math.max(0.02, volume / 10);
+
+    state.musicFadeTimer = window.setInterval(() => {
+      volume = Math.max(0, volume - step);
+      state.music.volume = volume;
+
+      if (volume <= 0.001) {
+        clearMusicFade();
+        state.music.pause();
+        callback?.();
+      }
+    }, 35);
+  }
+
+  function playCurrentMusic(restart = false) {
+    if (!state.soundEnabled || !state.music) return;
+
+    clearMusicFade();
+
+    if (restart) {
+      try {
+        state.music.currentTime = 0;
+      } catch (_) {}
+    }
+
+    state.music.volume = 0.30;
+
+    const promise = state.music.play();
+    if (promise?.catch) {
+      promise.catch((error) => {
+        console.warn("Muziek kon niet automatisch starten:", error);
+      });
+    }
+  }
+
+  function setMusicTrack(key, restart = true) {
+    if (!key) return;
+
+    if (state.musicKey === key && state.music) {
+      if (state.soundEnabled) playCurrentMusic(restart);
+      return;
+    }
+
+    const startNewTrack = () => {
+      clearMusicFade();
+
+      if (state.music) {
+        state.music.pause();
+        state.music.src = "";
+      }
+
+      const music = new Audio(musicPath(key));
+      music.loop = true;
+      music.preload = "auto";
+      music.volume = 0.30;
+
+      music.addEventListener("error", () => {
+        console.warn(`MP3 niet gevonden of niet afspeelbaar: ${musicPath(key)}`);
+      });
+
+      state.music = music;
+      state.musicKey = key;
+
+      if (state.soundEnabled) {
+        playCurrentMusic(restart);
+      }
     };
 
-    pulse();
-    state.ambientTimer = setInterval(pulse, 2200);
+    if (state.music && !state.music.paused) {
+      fadeOutMusic(startNewTrack);
+    } else {
+      startNewTrack();
+    }
   }
+
+  function stopMusicForPicker() {
+    fadeOutMusic(() => {
+      if (state.music) {
+        try {
+          state.music.currentTime = 0;
+        } catch (_) {}
+      }
+    });
+  }
+
 
   function updateSoundButton() {
     elements.soundToggle.textContent = state.soundEnabled ? "Geluid aan" : "Geluid uit";
@@ -155,9 +254,16 @@
     if (state.soundEnabled) {
       ensureAudioContext();
       playOpeningSound();
-      startAmbient();
+
+      if (state.music) {
+        playCurrentMusic(false);
+      } else if (state.mode === "player" && state.player) {
+        setMusicTrack(playerMusicKey(state.player.name), true);
+      } else if (state.mode === "group") {
+        setMusicTrack("groep", true);
+      }
     } else {
-      stopAmbient();
+      pauseMusic(false);
     }
   }
 
@@ -261,6 +367,7 @@
   }
 
   function renderPicker() {
+    stopMusicForPicker();
     elements.playerList.replaceChildren();
 
     [...state.data.players]
@@ -714,6 +821,7 @@
     elements.changePlayer.classList.remove("hidden");
     showOnly(elements.deck);
     updatePlayerCard();
+    setMusicTrack(playerMusicKey(player.name), true);
     playOpeningSound();
   }
 
@@ -809,6 +917,7 @@
     elements.changePlayer.classList.remove("hidden");
     showOnly(elements.groupDeck);
     updateGroupCard();
+    setMusicTrack("groep", true);
     playOpeningSound();
   }
 
@@ -923,7 +1032,10 @@
   const resumeSoundFromGesture = () => {
     if (!state.soundEnabled) return;
     ensureAudioContext();
-    if (!state.ambientTimer) startAmbient();
+
+    if (state.music?.paused) {
+      playCurrentMusic(false);
+    }
   };
 
   elements.prev.addEventListener("click", () => {
