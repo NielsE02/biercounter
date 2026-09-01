@@ -610,3 +610,50 @@ button {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+
+.theme-red { background: #8e2f2f; }
+.theme-teal { background: #176b63; }
+
+.record-title {
+  margin: 0;
+  max-width: 700px;
+  font-size: clamp(3.4rem, 13vw, 7rem);
+  line-height: .88;
+  letter-spacing: -.06em;
+}
+
+.career-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: .7rem;
+  margin-top: 1rem;
+}
+
+.career-stat {
+  padding: 1rem;
+  border-radius: 1rem;
+  background: rgba(255,255,255,.12);
+}
+
+.career-stat strong {
+  display: block;
+  font-size: clamp(1.5rem, 6vw, 2.6rem);
+  line-height: .95;
+}
+
+.career-stat span {
+  display: block;
+  margin-top: .45rem;
+  font-size: .78rem;
+  font-weight: 800;
+  opacity: .8;
+}
+
+.group-moment-icon {
+  margin: .3rem 0 1rem;
+  font-size: clamp(5rem, 22vw, 10rem);
+  font-weight: 950;
+  line-height: .8;
+  letter-spacing: -.08em;
+}
